@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+
+body{
+
+    background: #1F2937;
+}
+
+.message-box{
+
+    scroll-behavior: smooth;
+}
+
+.message-box::-webkit-scrollbar{
+
+    display: none;
+}

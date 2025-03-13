@@ -1,0 +1,267 @@
+import React, { useState, useEffect, useContext } from "react";
+import { useLocation } from "react-router-dom";
+import axios from "../config/axios";
+import {
+  initializeSocket,
+  recieveMessage,
+  sendMessage,
+} from "../config/socket";
+import { userContext } from "../context/UserContext";
+import Markdown from "markdown-to-jsx";
+
+const Project = () => {
+  const location = useLocation();
+
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUsersId, setSelectedUsersId] = useState([]);
+
+  const [users, setUsers] = useState([]);
+  const [project, setProject] = useState(location.state.elem);
+  const [message, setMessage] = useState("");
+  const { user } = useContext(userContext);
+  const messageBox = React.createRef();
+  const [messages, setMessages] = useState([]);
+
+  const fetchAllUsers = () => {
+    axios
+      .get("/users/all")
+      .then((res) => {
+        setUsers(res.data.users);
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
+  };
+
+  function addCollaborators() {
+    axios
+      .put("/project/add-user", {
+        projectId: location.state.elem._id,
+        users: Array.from(selectedUsersId),
+      })
+      .then((res) => setIsModalOpen(false))
+      .catch((err) => {
+        console.log(err.message);
+      });
+  }
+
+  function getCurrentCollaborators() {
+    axios
+      .get(`/project/get-project/${location.state.elem._id}`)
+      .then((res) => {
+        setProject(res.data.project);
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
+  }
+
+  function send() {
+    console.log("Sending Message");
+
+    sendMessage("project-message", {
+      message,
+      sender: user._id,
+    });
+
+    appendOutgoingMessage(message);
+
+    setMessage("");
+  }
+
+  useEffect(() => {
+    initializeSocket(project._id);
+
+    recieveMessage("project-message", (data) => {
+      console.log(data);
+      appendIncomingMessage(data);
+    });
+
+    fetchAllUsers();
+    getCurrentCollaborators();
+  }, []);
+
+  const handleUserSelect = (id) => {
+    setSelectedUsersId((prev) =>
+      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
+    );
+  };
+
+  function scrollToBottom() {
+    messageBox.current.scrollTop = messageBox.current.scrollHeight;
+  }
+
+  function appendIncomingMessage(messageObject) {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { ...messageObject, type: "incoming" },
+    ]);
+    scrollToBottom();
+  }
+
+  function appendOutgoingMessage(messageText) {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: messageText, user: user, type: "outgoing" },
+    ]);
+    scrollToBottom();
+  }
+
+  return (
+    <main className="h-screen w-screen flex">
+      <section className="relative left flex flex-col h-screen min-w-96 bg-slate-300">
+        <header className="flex justify-between items-center p-2 px-4 w-full bg-slate-200 absolute top-0">
+          <button
+            className="flex gap-2 cursor-pointer"
+            onClick={() => {
+              setIsModalOpen(true);
+            }}
+          >
+            <i className="ri-add-fill mr-1"></i>
+            <span>Add Collaborator</span>
+          </button>
+
+          <button
+            className="p-2 cursor-pointer"
+            onClick={() => {
+              setIsSidePanelOpen(!isSidePanelOpen);
+            }}
+          >
+            <i className="ri-group-fill"></i>
+          </button>
+        </header>
+
+        <div className="pt-14 pb-10 conversation-area flex flex-col flex-grow h-full overflow-hidden relative">
+          <div
+            ref={messageBox}
+            className="message-box p-1 flex-grow flex flex-col gap-2 overflow-y-auto"
+          >
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`message flex flex-col p-2 rounded-md w-fit ${msg.user._id === 'ai' ? 'max-w-80' : 'max-w-56'} ${
+                  msg.type === "outgoing"
+                    ? "ml-auto bg-slate-400"
+                    : "bg-gray-200"
+                }`}
+              >
+                <small className="opacity-65 text-xs">{msg.user?.email}</small>
+                {msg.user?._id === "ai" ? (
+                  <div
+                  className="overflow-auto bg-slate-900 text-white p-2 rounded-md"
+                  >
+                  <Markdown className="text-sm">{msg.text}</Markdown>
+                  </div>
+                ) : (
+                  <p className="text-sm">{msg.text}</p> // Regular message
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="inputField w-full flex absolute bottom-0">
+            <input
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
+              className="p-2 px-4 border-none outline-none bg-slate-200 rounded-tr-xl rounded-br-xl flex-grow"
+              type="text"
+              placeholder="Enter Message"
+            />
+            <button
+              onClick={() => send()}
+              className="px-5 bg-slate-950 text-white cursor-pointer"
+            >
+              <i className="ri-send-plane-fill text-lg"></i>
+            </button>
+          </div>
+        </div>
+
+        <div
+          className={`sidePanel w-full h-full flex flex-col gap-2 bg-slate-50 absolute transition-all ${
+            isSidePanelOpen ? "translate-x-0" : "-translate-x-full"
+          } top-0`}
+        >
+          <header className="flex justify-between items-center p-2 px-3 bg-slate-200">
+            <h1 className="font-semibold text-lg">Collaborators</h1>
+            <button
+              onClick={() => {
+                setIsSidePanelOpen(!isSidePanelOpen);
+              }}
+              className="p-2 cursor-pointer"
+            >
+              <i className="ri-close-large-fill"></i>
+            </button>
+          </header>
+
+          <div className="users flex flex-col gap-2">
+            {project.users &&
+              project.users.map((user) => {
+                return (
+                  <div className="user flex gap-2 items-center cursor-pointer hover:bg-slate-200 p-2 transition-all duration-200">
+                    <div className="aspect-square rounded-full w-fit h-fit flex justify-center items-center p-5 text-white bg-slate-500">
+                      <i className="ri-user-fill absolute"></i>
+                    </div>
+
+                    <h1 className="font-semibold text-lg">{user.email}</h1>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      </section>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center">
+          <div className="bg-slate-800 p-6 rounded-lg shadow-lg w-96">
+            <header className="flex justify-between items-start">
+              <h2 className="text-xl font-semibold mb-4 text-center text-white">
+                Select Collaborators
+              </h2>
+              <button
+                className="text-white cursor-pointer"
+                onClick={() => {
+                  setIsModalOpen(false);
+                }}
+              >
+                <i class="ri-close-large-fill"></i>
+              </button>
+            </header>
+            <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-1">
+              {users.map((user) => (
+                <div
+                  key={user._id}
+                  onClick={() => {
+                    handleUserSelect(user._id);
+                  }}
+                  className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-600 transition-all duration-100 ${
+                    selectedUsersId.indexOf(user._id) !== -1
+                      ? "bg-gray-600 "
+                      : ""
+                  }`}
+                >
+                  <button className="relative aspect-square rounded-full w-fit h-fit flex justify-center items-center p-5 text-white bg-slate-500">
+                    <i className="ri-user-fill absolute"></i>
+                  </button>
+                  <span className="text-white">{user.email}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => addCollaborators()}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 transition-all duration-100"
+              >
+                Add Collaborators
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+};
+
+export default Project;
