@@ -8,6 +8,10 @@ import {
 } from "../config/socket";
 import { userContext } from "../context/UserContext";
 import Markdown from "markdown-to-jsx";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from '@codemirror/lang-javascript';
+import { dracula } from "@uiw/codemirror-theme-dracula";
+import { githubDark } from "@uiw/codemirror-theme-github"
 
 const Project = () => {
   const location = useLocation();
@@ -22,6 +26,10 @@ const Project = () => {
   const { user } = useContext(userContext);
   const messageBox = React.createRef();
   const [messages, setMessages] = useState([]);
+  const [fileTree, setFileTree] = useState({});
+
+  const [activeFile , setActiveFile] = useState(null);
+  const [openFiles , setOpenFiles] = useState([])
 
   const fetchAllUsers = () => {
     axios
@@ -65,53 +73,77 @@ const Project = () => {
       sender: user._id,
     });
 
-    appendOutgoingMessage(message);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: message, user: user, type: "outgoing" },
+    ]);
 
     setMessage("");
+  }
+
+  function writeAiMessage(message) {
+    const messageObject = JSON.parse(message);
+    return (
+      <div className="overflow-auto bg-slate-900 text-white p-2 rounded-md">
+        <Markdown className="text-sm">{messageObject.text}</Markdown>
+      </div>
+    );
   }
 
   useEffect(() => {
     initializeSocket(project._id);
 
     recieveMessage("project-message", (data) => {
-      console.log(data);
-      appendIncomingMessage(data);
-    });
 
+      console.log("Response Message: " , data);
+      
+      if(data.user._id === 'ai'){
+        
+        const message = JSON.parse(data.text);
+        console.log("Response Message after parsing: ", message);
+        if(message.fileTree){
+          setOpenFiles([])
+          setFileTree(message.fileTree)
+        }
+      }
+      
+
+      
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { ...data, type: "incoming" },
+      ]);
+    });
+    
     fetchAllUsers();
     getCurrentCollaborators();
   }, []);
-
+  
   const handleUserSelect = (id) => {
     setSelectedUsersId((prev) =>
       prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
-    );
-  };
+  );
+};
 
-  function scrollToBottom() {
-    messageBox.current.scrollTop = messageBox.current.scrollHeight;
+function scrollToBottom() {
+  messageBox.current.scrollTop = messageBox.current.scrollHeight;
+}
+
+function appendIncomingMessage(messageObject) {
+  
+  scrollToBottom();
   }
-
-  function appendIncomingMessage(messageObject) {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { ...messageObject, type: "incoming" },
-    ]);
-    scrollToBottom();
-  }
-
+  
   function appendOutgoingMessage(messageText) {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { text: messageText, user: user, type: "outgoing" },
-    ]);
+    
     scrollToBottom();
   }
-
+  
   return (
     <main className="h-screen w-screen flex">
+      
       <section className="relative left flex flex-col h-screen min-w-96 bg-slate-300">
-        <header className="flex justify-between items-center p-2 px-4 w-full bg-slate-200 absolute top-0">
+        <header className="flex justify-between items-center p-2 px-4 w-full bg-slate-200">
           <button
             className="flex gap-2 cursor-pointer"
             onClick={() => {
@@ -132,7 +164,7 @@ const Project = () => {
           </button>
         </header>
 
-        <div className="pt-14 pb-10 conversation-area flex flex-col flex-grow h-full overflow-hidden relative">
+        <div className="pt-1 pb-11 conversation-area flex flex-col flex-grow h-full overflow-hidden relative">
           <div
             ref={messageBox}
             className="message-box p-1 flex-grow flex flex-col gap-2 overflow-y-auto"
@@ -140,19 +172,20 @@ const Project = () => {
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`message flex flex-col p-2 rounded-md w-fit ${msg.user._id === 'ai' ? 'max-w-80' : 'max-w-56'} ${
-                  msg.type === "outgoing"
-                    ? "ml-auto bg-slate-400"
-                    : "bg-gray-200"
-                }`}
+                className={`message flex flex-col p-2 rounded-md w-fit 
+                ${
+                  msg.user._id === "ai" ? "max-w-80" : "max-w-56"
+                }
+                ${
+                  msg.type === 'incoming'
+                  ? 'bg-slate-100'
+                  : 'ml-auto bg-slate-50'
+                }
+                `}
               >
                 <small className="opacity-65 text-xs">{msg.user?.email}</small>
                 {msg.user?._id === "ai" ? (
-                  <div
-                  className="overflow-auto bg-slate-900 text-white p-2 rounded-md"
-                  >
-                  <Markdown className="text-sm">{msg.text}</Markdown>
-                  </div>
+                  writeAiMessage(msg.text)
                 ) : (
                   <p className="text-sm">{msg.text}</p> // Regular message
                 )}
@@ -211,6 +244,69 @@ const Project = () => {
           </div>
         </div>
       </section>
+      
+
+      <section className="right bg-red-50 flex-grow h-full flex">
+              <div className="explorer h-full max-w-64 min-w-52 bg-slate-200">
+                  <div className="fileTree">
+                    {
+                      Object.keys(fileTree).map((file , index)=>(
+                        <button
+                        onClick={()=>{
+                          
+                          setActiveFile(file)
+                          setOpenFiles([...new Set([...openFiles , file])])
+                        }}
+                         key={index}
+                         className="cursor-pointer tree-element p-2 px-4 flex items-center gap-2 bg-slate-300 w-full">
+                      <p className="font-semibold text-lg">{file}</p>
+                    </button>
+                      ))
+                    }
+                  </div>
+              </div>
+
+              {activeFile && (
+                <div className="code-editor flex flex-col flex-grow h-full">
+                    <div className="top flex">
+                      {
+                        openFiles.map((file , index)=>(
+                          <button
+                          key={index}
+                          onClick={()=>(setActiveFile(file))}
+                          className={`w-fit cursor-pointer p-3 px-4 flex items-center gap-2 font-semibold ${activeFile === file ? "bg-slate-300" : "bg-slate-100"}`} 
+                          >
+                            <p className="text-black">{file}</p>
+                          </button>
+                        ))
+                      }
+                    </div>
+                    <div className="bottom flex flex-grow p-4 bg-gray-800 text-white outline-none">
+                      {
+                        fileTree[activeFile] && (
+                          <CodeMirror
+                          value={fileTree[activeFile].content}
+                          extensions={[javascript({jsx:true})]}
+                          theme={dracula}
+                          onChange={(newCode)=>(setFileTree({
+                            ...fileTree,
+                            [activeFile]:{
+                              content: newCode
+                            }
+                          }))}
+                          basicSetup={{ lineNumbers: true, tabSize: 1 }}
+                          className="w-full h-full text-lg"
+                          >
+
+                          </CodeMirror>
+                        )
+                      }
+                    </div>
+                </div>
+              )}
+              
+      </section>
+      
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center">

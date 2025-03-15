@@ -10,7 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.3",
     "@tailwindcss/vite": "^4.0.11",
+    "@uiw/codemirror-theme-aura": "^4.23.10",
+    "@uiw/codemirror-theme-dracula": "^4.23.10",
+    "@uiw/codemirror-theme-github": "^4.23.10",
+    "@uiw/react-codemirror": "^4.23.10",
+    "@webcontainer/api": "^1.5.1-internal.9",
     "axios": "^1.8.1",
     "markdown-to-jsx": "^7.7.4",
     "react": "^19.0.0",
