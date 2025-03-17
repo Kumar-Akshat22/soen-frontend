@@ -40,6 +40,7 @@ const Home = () => {
       })
       .then((res) => {
         console.log(res.data);
+        setIsModalOpen(false)
       })
       .catch((err) => {
         console.log(err);

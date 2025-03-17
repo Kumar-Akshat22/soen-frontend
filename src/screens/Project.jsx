@@ -9,9 +9,9 @@ import {
 import { userContext } from "../context/UserContext";
 import Markdown from "markdown-to-jsx";
 import CodeMirror from "@uiw/react-codemirror";
-import { javascript } from '@codemirror/lang-javascript';
+import { javascript } from "@codemirror/lang-javascript";
 import { dracula } from "@uiw/codemirror-theme-dracula";
-import { githubDark } from "@uiw/codemirror-theme-github"
+import { getWebContainer } from "../config/webContainer";
 
 const Project = () => {
   const location = useLocation();
@@ -28,8 +28,14 @@ const Project = () => {
   const [messages, setMessages] = useState([]);
   const [fileTree, setFileTree] = useState({});
 
-  const [activeFile , setActiveFile] = useState(null);
-  const [openFiles , setOpenFiles] = useState([])
+  const [activeFile, setActiveFile] = useState(null);
+  const [openFiles, setOpenFiles] = useState([]);
+  
+  const [webContainer , setWebContainer] = useState(null);
+
+  const [iFrameUrl , setIFrameUrl] = useState(null);
+
+  const [runProcess , setRunProcess] = useState(null);
 
   const fetchAllUsers = () => {
     axios
@@ -93,55 +99,51 @@ const Project = () => {
   useEffect(() => {
     initializeSocket(project._id);
 
-    recieveMessage("project-message", (data) => {
+    if(!webContainer){
 
-      console.log("Response Message: " , data);
-      
-      if(data.user._id === 'ai'){
-        
-        const message = JSON.parse(data.text);
+      getWebContainer().then(container=>{
+
+        setWebContainer(container);
+        console.log("Container Started");
+      })
+      .catch((err)=>{
+
+        console.log(err.message);
+      })
+    }
+
+    recieveMessage("project-message", async (data) => {
+      console.log("Response Message: ", data);
+
+      if (data.user._id === "ai") {
+        const aiResponse = await data.text;
+        const message = JSON.parse(aiResponse);
         console.log("Response Message after parsing: ", message);
-        if(message.fileTree){
-          setOpenFiles([])
-          setFileTree(message.fileTree)
+        if (message.fileTree) {
+          setOpenFiles([]);
+          webContainer?.mount(message.fileTree);
+          setFileTree(message.fileTree);
         }
       }
-      
 
-      
       setMessages((prevMessages) => [
         ...prevMessages,
         { ...data, type: "incoming" },
       ]);
     });
-    
+
     fetchAllUsers();
     getCurrentCollaborators();
   }, []);
-  
+
   const handleUserSelect = (id) => {
     setSelectedUsersId((prev) =>
       prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
-  );
-};
+    );
+  };
 
-function scrollToBottom() {
-  messageBox.current.scrollTop = messageBox.current.scrollHeight;
-}
-
-function appendIncomingMessage(messageObject) {
-  
-  scrollToBottom();
-  }
-  
-  function appendOutgoingMessage(messageText) {
-    
-    scrollToBottom();
-  }
-  
   return (
-    <main className="h-screen w-screen flex">
-      
+    <main className="h-screen w-full flex">
       <section className="relative left flex flex-col h-screen min-w-96 bg-slate-300">
         <header className="flex justify-between items-center p-2 px-4 w-full bg-slate-200">
           <button
@@ -173,13 +175,11 @@ function appendIncomingMessage(messageObject) {
               <div
                 key={index}
                 className={`message flex flex-col p-2 rounded-md w-fit 
+                ${msg.user._id === "ai" ? "max-w-80" : "max-w-56"}
                 ${
-                  msg.user._id === "ai" ? "max-w-80" : "max-w-56"
-                }
-                ${
-                  msg.type === 'incoming'
-                  ? 'bg-slate-100'
-                  : 'ml-auto bg-slate-50'
+                  msg.type === "incoming"
+                    ? "bg-slate-100"
+                    : "ml-auto bg-slate-50"
                 }
                 `}
               >
@@ -244,69 +244,133 @@ function appendIncomingMessage(messageObject) {
           </div>
         </div>
       </section>
-      
 
       <section className="right bg-red-50 flex-grow h-full flex">
-              <div className="explorer h-full max-w-64 min-w-52 bg-slate-200">
-                  <div className="fileTree">
-                    {
-                      Object.keys(fileTree).map((file , index)=>(
-                        <button
-                        onClick={()=>{
-                          
-                          setActiveFile(file)
-                          setOpenFiles([...new Set([...openFiles , file])])
-                        }}
-                         key={index}
-                         className="cursor-pointer tree-element p-2 px-4 flex items-center gap-2 bg-slate-300 w-full">
-                      <p className="font-semibold text-lg">{file}</p>
-                    </button>
-                      ))
-                    }
-                  </div>
+        <div className="explorer h-full max-w-64 min-w-52 bg-slate-200">
+          <div className="fileTree">
+            {Object.keys(fileTree).map((file, index) => (
+              <button
+                onClick={() => {
+                  setActiveFile(file);
+                  setOpenFiles([...new Set([...openFiles, file])]);
+                }}
+                key={index}
+                className="cursor-pointer tree-element p-2 px-4 flex items-center gap-2 bg-slate-300 w-full"
+              >
+                <p className="font-semibold text-lg">{file}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeFile && (
+          <div className="code-editor flex flex-col flex-grow h-full">
+            <div className="top flex justify-between w-full">
+              <div className="flex">
+              {openFiles.map((file, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveFile(file)}
+                  className={`w-fit cursor-pointer p-3 px-4 flex items-center gap-2 font-semibold ${
+                    activeFile === file ? "bg-slate-300" : "bg-slate-100"
+                  }`}
+                >
+                  <p className="text-black">{file}</p>
+                </button>
+              ))}
               </div>
 
-              {activeFile && (
-                <div className="code-editor flex flex-col flex-grow h-full">
-                    <div className="top flex">
-                      {
-                        openFiles.map((file , index)=>(
-                          <button
-                          key={index}
-                          onClick={()=>(setActiveFile(file))}
-                          className={`w-fit cursor-pointer p-3 px-4 flex items-center gap-2 font-semibold ${activeFile === file ? "bg-slate-300" : "bg-slate-100"}`} 
-                          >
-                            <p className="text-black">{file}</p>
-                          </button>
-                        ))
-                      }
-                    </div>
-                    <div className="bottom flex flex-grow p-4 bg-gray-800 text-white outline-none">
-                      {
-                        fileTree[activeFile] && (
-                          <CodeMirror
-                          value={fileTree[activeFile].content}
-                          extensions={[javascript({jsx:true})]}
-                          theme={dracula}
-                          onChange={(newCode)=>(setFileTree({
-                            ...fileTree,
-                            [activeFile]:{
-                              content: newCode
-                            }
-                          }))}
-                          basicSetup={{ lineNumbers: true, tabSize: 1 }}
-                          className="w-full h-full text-lg"
-                          >
+              <div className="actions">
+                <button
+                onClick={async ()=>{
+                  
+                  await webContainer?.mount(fileTree);
 
-                          </CodeMirror>
-                        )
-                      }
-                    </div>
-                </div>
+                  const buildProcess = await webContainer?.spawn('npm' , ['install']);
+
+                  buildProcess.output.pipeTo(new WritableStream({
+                    write(chunk){
+                      console.log(chunk)
+                    }
+                  }))
+
+                  if(runProcess){
+
+                    runProcess.kill()
+                  }
+
+                  const tempRunProcess = await webContainer?.spawn('npm' , ['start']);
+
+                  tempRunProcess.output.pipeTo(new WritableStream({
+                    write(chunk){
+                      console.log(chunk)
+                    }
+                  }))
+
+                  setRunProcess(tempRunProcess)
+
+                  webContainer.on("server-ready" , (port , url)=>{
+                    console.log(`PORT: ${port} , URL: ${url}`)
+                    setIFrameUrl(url);
+                  })
+                }}
+                className="px-4 py-3 bg-slate-300 text-black cursor-pointer"
+                >
+                  RUN
+                </button>
+              </div>
+
+            </div>
+            <div className="bottom flex flex-grow p-4 bg-gray-800 text-white outline-none">
+              {fileTree[activeFile] && (
+                <CodeMirror
+                  value={fileTree[activeFile].file.contents}
+                  extensions={[javascript({ jsx: true })]}
+                  theme={dracula}
+                  onChange={(newCode) =>
+                    setFileTree({
+                      ...fileTree,
+                      [activeFile]: {
+                        file:{
+                        contents: newCode,
+
+                        }
+                      },
+                    })
+                  }
+                  basicSetup={{
+                    lineNumbers: true, // Show line numbers
+                    foldGutter: true, // Enable code folding
+                    highlightActiveLine: true, // Highlight the active line
+                  }}
+                  options={{
+                    lineWrapping: true, // 🔥 Enable line wrapping for long lines
+                  }}
+                  height="620px"
+                  className="text-lg overflow-auto whitespace-pre-wrap break-words w-full"
+                ></CodeMirror>
               )}
-              
+            </div>
+          </div>
+        )}
+
+        {iFrameUrl&&webContainer &&
+          
+          (<div className="flex min-w-96 flex-col h-full">
+
+            <div className="address-bar">
+              <input type="text" 
+                onChange={(e)=>{setIFrameUrl(e.target.value)}}
+                value={iFrameUrl}
+                className="w-full p-2 px-4 bg-slate-200"
+              />
+            </div>
+            <iframe src={iFrameUrl} className="w-full h-full"></iframe>
+
+
+          </div>)
+        }
       </section>
-      
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center">
