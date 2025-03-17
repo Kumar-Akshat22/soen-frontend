@@ -1,10 +1,8 @@
-![Project Banner](https://source.unsplash.com/1600x600/?technology,coding)
+![Project Banner](https://github.com/user-attachments/assets/60464fbf-76c0-47e7-ad89-4b3f82034676)
 
 # SOEN - Your AI-Powered Web IDE with Real-Time Collaboration🚀
 
 An advanced **browser-based coding environment** that allows developers to create and run **Express.js, React.js, and more** directly in the browser using **WebContainers**. It features **real-time collaboration, AI-powered assistance, and a rich code editor experience**.  
-
-🔗 **[Live Demo](#)** | ⭐ **[Star this Repo](#)** | 📜 **[Read the Docs](#)**
 
 ---
 
@@ -13,10 +11,9 @@ An advanced **browser-based coding environment** that allows developers to creat
 ✅ **Run Node.js projects in the browser** using **WebContainers**  
 ✅ **Real-time chat** with **Socket.io** for seamless collaboration  
 ✅ **AI-powered code assistance** for generating and refining projects  
-✅ **MERN Stack-powered authentication** for secure user management  
+✅ **JWT-powered authentication** for secure user management  
 ✅ **CodeMirror-based editor** with syntax highlighting & themes  
 ✅ **Instant file system simulation** to manage projects dynamically  
-✅ **WebSocket-powered live updates** for near-zero latency  
 
 ---
 
@@ -35,28 +32,18 @@ An advanced **browser-based coding environment** that allows developers to creat
 
 ### Realtime Communication:
 ![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)
-![WebSockets](https://img.shields.io/badge/WebSockets-FF9800?style=for-the-badge&logo=websocket&logoColor=white)
 
 ### AI Integration:
-![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
 ![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
-
-### Deployment:
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![Railway](https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)
 
 ---
 
 ## 🎬 Demo
-
-🔹 **Code Editing with AI Assistance**  
-<img src="https://source.unsplash.com/900x500/?code,editor" width="100%">  
-
-🔹 **Real-time Chat System**  
-<img src="https://source.unsplash.com/900x500/?chat,communication" width="100%">  
+🔹 **Chat UI**    
+![Chat UI](https://github.com/user-attachments/assets/41a45e0d-e7c8-454e-a23e-34d41baab9ea)
 
 🔹 **Live Execution of Node.js Projects**  
-<img src="https://source.unsplash.com/900x500/?developer,coding" width="100%">  
+![Code Run](https://github.com/user-attachments/assets/b6f66055-1820-4789-8d9a-6caf6c678d07)
 
 ---
 
@@ -64,8 +51,8 @@ An advanced **browser-based coding environment** that allows developers to creat
 
 ### 1️⃣ Clone the Repository
 ```sh
-git clone https://github.com/your-username/project-name.git
-cd project-name
+git clone https://github.com/your-username/soen-frontend.git
+cd soen-frontend
 ```
 
 ### 2️⃣ Install Dependencies
@@ -81,17 +68,8 @@ npm run dev
 
 ### 4️⃣ Open in Browser
 ```
-http://localhost:3000
+http://localhost:5173
 ```
-
----
-
-## 📌 Roadmap
-
-🚀 **Phase 1:** Basic Web IDE with Code Execution  
-🚀 **Phase 2:** Real-time Collaboration with WebSockets  
-🚀 **Phase 3:** AI Integration for Code Assistance  
-🚀 **Phase 4:** Cloud Deployment for Browser-based Execution  
 
 ---
 
@@ -103,12 +81,6 @@ We welcome contributions! Follow these steps:
 3️⃣ Commit changes (`git commit -m "Added feature X"`)  
 4️⃣ Push to branch (`git push origin feature-name`)  
 5️⃣ Open a Pull Request  
-
----
-
-## 📜 License
-
-📝 MIT License. See [LICENSE](LICENSE) for details.  
 
 ---
 
